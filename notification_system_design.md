@@ -1,128 +1,153 @@
-# Stage 1
+## Stage 1
 
-This system is used to manage notifications for students.
+This system is used to manage notifications for students like placement updates, results, and events.
 
-Main features:
-- Get notifications
-- Create notification
-- Mark notification as read
+The main things it should support are:
 
-### Get Notifications
+* Getting notifications for a student
+* Creating a new notification
+* Marking a notification as read
+
+### APIs
+
+To get notifications:
 GET /notifications/{studentId}
+This will return all notifications of a student.
 
-Returns notifications of a student.
-
-### Create Notification
+To create a notification:
 POST /notifications
+Used to send a new notification to a student.
 
-Creates a new notification.
-
-### Mark as Read
+To mark as read:
 PUT /notifications/{id}
+This updates the notification as read.
 
-Updates read status.
-
-### Real-time system
-WebSockets can be used to send notifications instantly.
+For real-time updates, we can use WebSockets so users receive notifications instantly without refreshing.
 
 ---
 
-# Stage 2
+## Stage 2
 
-I would use MySQL because it is simple and structured.
+I would use MySQL because the data is structured and easy to manage.
 
 Table: notifications
+Fields:
 
-- id
-- studentId
-- message
-- type
-- isRead
-- createdAt
+* id
+* studentId
+* message
+* type (Placement / Result / Event)
+* isRead
+* createdAt
 
-Problem:
-- Large data → slow queries
+### Problems
 
-Solution:
-- Use indexing
-- Use pagination
+As the data grows, queries may become slow.
+
+### Solutions
+
+* Add indexes on important columns
+* Use pagination to limit data
+* Archive old data if needed
 
 ---
 
-# Stage 3
+## Stage 3
 
-The query is correct but slow.
+The given query is correct but becomes slow when the table is large.
 
 Reason:
-- No index
-- Large data
 
-Fix:
-Add index on:
+* It scans too many rows without index
+
+Solution:
+Add a composite index on:
 (studentId, isRead, createdAt)
 
+This improves performance significantly.
+
 Time complexity:
-- Without index → O(n)
-- With index → O(log n)
 
-Adding index on all columns is not good because it slows inserts.
+* Without index → O(n)
+* With index → O(log n)
 
-Query for placement notifications:
+Adding index on every column is not good because it increases storage and slows inserts.
+
+### Query
+
+To find students who got placement notifications in last 7 days:
 
 SELECT DISTINCT studentId
 FROM notifications
-WHERE notificationType = 'placement'
+WHERE type = 'Placement'
 AND createdAt >= NOW() - INTERVAL 7 DAY;
 
 ---
 
-# Stage 4
+## Stage 4
 
-Fetching data on every page load increases DB load.
+Currently notifications are fetched on every page load, which puts heavy load on the database.
 
-Solutions:
+### Improvements
 
-1. Caching → faster but slightly outdated data
-2. Pagination → less data load
-3. Lazy loading → load only when needed
-4. WebSockets → real-time updates
+* Caching → faster responses (but data may be slightly outdated)
+* Pagination → load only limited data
+* Lazy loading → load when needed
+* WebSockets → push notifications instead of repeated fetching
 
 ---
 
-# Stage 5
+## Stage 5
 
-Problems:
-- Loop is slow
-- No error handling
-- No retry
+The given approach has some issues:
 
-Better approach:
-Use queue system
+* It processes one by one (slow)
+* No retry if email fails
+* Not scalable
+
+### Better Approach
+
+Use a queue system.
+
+Flow:
+
+* Save notification in DB
+* Add task to queue
+* Worker processes tasks
 
 Pseudo code:
 
 function notify_all(student_ids, message):
-    for student_id in student_ids:
-        save_to_db(student_id, message)
-        add_to_queue(student_id, message)
+for student_id in student_ids:
+save_to_db(student_id, message)
+add_to_queue(student_id, message)
 
 worker():
-    while true:
-        task = get_task()
-        try:
-            send_email(task)
-        except:
-            retry(task)
+while true:
+task = get_task()
+try:
+send_email(task)
+except:
+retry(task)
+
+This makes the system faster and more reliable.
 
 ---
 
-# Stage 6
+## Stage 6
 
-Priority is based on:
-Placement > Result > Event
+Here, notifications are prioritized.
 
-Notifications are sorted using:
-- Priority
-- Time
+Priority:
 
-Only top 10 are returned.
+* Placement → highest
+* Result → medium
+* Event → lowest
+
+Notifications are sorted based on:
+
+1. Priority
+2. Latest time
+
+Finally, only top 10 notifications are shown so that users see the most important updates first.
+
