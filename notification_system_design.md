@@ -151,3 +151,7 @@ Notifications are sorted based on:
 
 Finally, only top 10 notifications are shown so that users see the most important updates first.
 
+## Output Screenshot
+
+![Output](stage6.png)
+
