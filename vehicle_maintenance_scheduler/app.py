@@ -1,7 +1,7 @@
 
 
 def main():
-    print("Vehicle Maintenance Scheduler Backend Running")
+    print("Backend service initialized successfully")
 
 if __name__ == "__main__":
     main()
